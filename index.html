@@ -320,7 +320,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
 <!-- HEADER -->
 <header class="app-header">
   <div class="brand"><div class="brand-name">ARGUS FIELD</div><div class="brand-sub">Planning & Engineering</div></div>
-  <div class="conn-light"><div class="conn-dot" id="connDot"></div><span id="connLabel">Checking...</span></div>
+
 </header>
 
 <!-- NAV -->
@@ -730,7 +730,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
 
 <!-- FOOTER -->
 <footer class="app-footer">
-  <span id="footerSync">Last sync: Never</span>
+  <span>ArgusLand Planning & Engineering</span>
   <span id="footerVersion">v3.0</span>
 </footer>
 
@@ -820,29 +820,16 @@ function obFinish(){
 // INIT
 // ═══════════════════════════════════════════════════════
 function init(){
-  updateConnLight(navigator.onLine);
   renderHome();
   setTimeout(()=>{checkAutoDigest();setDailyRecall();},100);
   setTimeout(()=>{checkManagerRemember();},150);
   setTimeout(()=>{populatePDSelect();},200);
-  setTimeout(()=>{setInterval(()=>updateConnLight(navigator.onLine),10000);},3000);
 }
 
 // ═══════════════════════════════════════════════════════
-// CONNECTION
+// CONNECTION (simplified — no blocking check)
 // ═══════════════════════════════════════════════════════
-function updateConnLight(isOnline){
-  const dot=document.getElementById('connDot');
-  const lbl=document.getElementById('connLabel');
-  const footer=document.getElementById('footerSync');
-  if(!dot||!lbl)return;
-  if(isOnline){dot.className='conn-dot online';lbl.innerText='Live';}
-  else{dot.className='conn-dot offline';lbl.innerText='Offline';}
-  if(footer)footer.innerText=lastSync==='Never'?'Not yet synced':'Last sync: '+lastSync;
-}
-function checkConnection(){updateConnLight(navigator.onLine);}
-window.addEventListener('online',()=>updateConnLight(true));
-window.addEventListener('offline',()=>updateConnLight(false));
+function checkConnection(){}
 
 // ═══════════════════════════════════════════════════════
 // NAVIGATION
