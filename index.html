@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ARGUS FIELD</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0a1628">
 <meta name="mobile-web-app-capable" content="yes">
@@ -422,7 +425,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
   <div class="inner-page active" id="csw-page-search">
     <div style="position:relative;">
       <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);">🔍</span>
-      <input type="text" id="searchInput" placeholder="Search title, site, type, owner..." oninput="renderSearch()" style="padding-left:34px;" autocomplete="off">
+      <input type="text" id="searchInput" placeholder="Search title, site, type, owner..." oninput="debouncedRenderSearch()" style="padding-left:34px;" autocomplete="off">
     </div>
     <div style="display:flex;gap:6px;">
       <select id="filterStatus" onchange="renderSearch()" style="flex:1;"><option value="">All Status</option><option>Draft</option><option>Submitted</option><option>Approved</option><option>Rejected</option><option>Revised</option></select>
@@ -441,7 +444,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
         <button class="btn btn-secondary btn-sm" onclick="setCSWEntry('formal')" id="entryFormalBtn" style="flex:1;">📋 Formal CSW</button>
       </div>
       <label>Title *</label>
-      <input type="text" id="cswTitle" placeholder="Short clear title" oninput="checkSimilar();analyzeOwnership();" autocomplete="off">
+      <input type="text" id="cswTitle" placeholder="Short clear title" oninput="debouncedCheckSimilar();debouncedAnalyzeOwnership();" autocomplete="off">
       <div class="dup-warn" id="dupWarn"></div>
       <div id="ownershipResult" style="display:none;margin-top:8px;">
         <div class="sec-label">Detected Ownership</div>
@@ -460,7 +463,7 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
       <label>Department</label>
       <select id="cswDept"><option value="">Select...</option><option>Planning & Engineering</option><option>Construction</option><option>QA/QC</option><option>Finance</option><option>Admin</option><option>Sales</option><option>Legal</option><option>Cross-Department</option></select>
       <label>Situation *</label>
-      <textarea id="cswSituation" placeholder="What happened? What is the problem? Any language." oninput="analyzeOwnership();checkSimilar();"></textarea>
+      <textarea id="cswSituation" placeholder="What happened? What is the problem? Any language." oninput="debouncedAnalyzeOwnership();debouncedCheckSimilar();"></textarea>
       <label>Impact</label>
       <textarea id="cswImpact" placeholder="What happens if we don't fix this?" style="min-height:55px;"></textarea>
       <label>Root Cause (if known)</label>
@@ -775,7 +778,14 @@ const NOW=()=>new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-di
 const FMT=d=>{try{return new Date(d).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});}catch{return d;}};
 const DAYS_AGO=d=>Math.round((Date.now()-new Date(d).getTime())/86400000);
 
-// Gravity keywords (silent detection)
+// Debounce utility — prevents heavy functions from running on every keystroke
+function debounce(fn, delay){
+  let timer;
+  return function(...args){ clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args), delay); };
+}
+const debouncedCheckSimilar = debounce(checkSimilar, 400);
+const debouncedAnalyzeOwnership = debounce(analyzeOwnership, 400);
+const debouncedRenderSearch = debounce(renderSearch, 300);
 const GRAVITY_HIGH=['crack','collapse','failure','encroachment','legal','permit','lgu','structural','footing','slope','unsafe','injury','hazard','violation','retaining wall','emergency'];
 const GRAVITY_MEDIUM=['defect','quality','standard','specification','non-conforming','punch list','inspection','pag-ibig','coc','rework','compliance','incomplete'];
 const GRAVITY_LOW=['report','schedule','coordination','meeting','document','filing','update','memo','policy draft','admin'];
@@ -810,36 +820,29 @@ function obFinish(){
 // INIT
 // ═══════════════════════════════════════════════════════
 function init(){
-  checkConnection();
-  setInterval(checkConnection,30000);
-  checkManagerRemember();
+  updateConnLight(navigator.onLine);
   renderHome();
-  renderSearch();
-  renderWork();
-  populatePDSelect();
-  renderConfig();
-  checkAutoDigest();
-  setDailyRecall();
+  setTimeout(()=>{checkAutoDigest();setDailyRecall();},100);
+  setTimeout(()=>{checkManagerRemember();},150);
+  setTimeout(()=>{populatePDSelect();},200);
+  setTimeout(()=>{setInterval(()=>updateConnLight(navigator.onLine),10000);},3000);
 }
 
 // ═══════════════════════════════════════════════════════
 // CONNECTION
 // ═══════════════════════════════════════════════════════
-function checkConnection(){
+function updateConnLight(isOnline){
   const dot=document.getElementById('connDot');
   const lbl=document.getElementById('connLabel');
   const footer=document.getElementById('footerSync');
-  if(navigator.onLine){
-    dot.className='conn-dot online';
-    lbl.innerText='Live';
-  } else {
-    dot.className='conn-dot offline';
-    lbl.innerText='Offline';
-  }
-  footer.innerText='Last sync: '+lastSync;
+  if(!dot||!lbl)return;
+  if(isOnline){dot.className='conn-dot online';lbl.innerText='Live';}
+  else{dot.className='conn-dot offline';lbl.innerText='Offline';}
+  if(footer)footer.innerText=lastSync==='Never'?'Not yet synced':'Last sync: '+lastSync;
 }
-window.addEventListener('online',checkConnection);
-window.addEventListener('offline',checkConnection);
+function checkConnection(){updateConnLight(navigator.onLine);}
+window.addEventListener('online',()=>updateConnLight(true));
+window.addEventListener('offline',()=>updateConnLight(false));
 
 // ═══════════════════════════════════════════════════════
 // NAVIGATION
@@ -849,12 +852,15 @@ function showPage(name){
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
-  if(name==='home')renderHome();
-  if(name==='work')renderWork();
-  if(name==='csw'){renderSearch();renderList();}
-  if(name==='daily')renderDailyPage();
-  if(name==='report')renderReport();
-  if(name==='config')renderConfig();
+  // Lazy render — only runs when tab is actually opened
+  requestAnimationFrame(()=>{
+    if(name==='home')renderHome();
+    if(name==='work')renderWork();
+    if(name==='csw'){renderSearch();renderList();}
+    if(name==='daily')renderDailyPage();
+    if(name==='report')renderReport();
+    if(name==='config')renderConfig();
+  });
 }
 function showInnerTab(page,tab){
   document.querySelectorAll(`#page-${page} .inner-tab`).forEach(t=>t.classList.remove('active'));
