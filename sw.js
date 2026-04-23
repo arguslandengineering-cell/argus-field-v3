@@ -1,4 +1,4 @@
-const CACHE = 'argus-field-v3.2';
+const CACHE = 'argus-field-v4';
 const ASSETS = [
   './index.html',
   './manifest.json',
