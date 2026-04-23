@@ -1539,7 +1539,7 @@ function viewCSW(id){
       <div><div class="sec-label">Owners</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;">${(c.owners||['—']).map(o=>`<div class="owner-badge">👤 ${o}</div>`).join('')}</div></div>
       ${c.fileUrl?`<a href="${c.fileUrl}" target="_blank"><button class="btn btn-primary" style="margin-top:4px;">📄 Open / Reprint Signed CSW</button></a>`:''}
       <div><div class="sec-label">Recall History (${recall.count}x)</div>
-        ${recall.responses.slice(-3).map(r=>`<div style="font-size:11px;color:var(--muted);">${r.response==='in_place'?'✅':'r.response==='needs_review'?'⚠️':'❌'} ${r.response.replace('_',' ')} — ${r.by} ${FMT(r.date)}</div>`).join('')||'<div style="font-size:11px;color:var(--muted);">Not yet recalled</div>'}
+        ${recall.responses.slice(-3).map(r=>{const icon=r.response==='in_place'?'✅':r.response==='needs_review'?'⚠️':'❌';return`<div style="font-size:11px;color:var(--muted);">${icon} ${r.response.replace('_',' ')} — ${r.by} ${FMT(r.date)}</div>`;}).join('')||'<div style="font-size:11px;color:var(--muted);">Not yet recalled</div>'}
       </div>
       <div><div class="sec-label">Status History</div>
         ${(c.history||[]).map(h=>`<div class="history-entry ${h.status?.toLowerCase()}">${h.status} — ${h.by||'?'} ${FMT(h.date)}${h.note?' · '+h.note:''}</div>`).join('')||'<div class="history-entry">No history</div>'}
@@ -1846,7 +1846,7 @@ Rules: Grade 10 language. Direct and useful. Max 300 words. No markdown symbols.
 
 ---
 TEAM WORKLOAD DATA:
-${allNames.map(name=>{const t=tasks.filter(x=>x.createdBy===name||(x.owners||[]).includes(name));return`${name}: ${t.filter(x=>x.status==='In Progress').length} active, ${t.filter(x=>x.status==='Blocked').length} blocked — ${t.filter(x=>x.status!=='Done').slice(0,2).map(x=>x.desc.slice(0,35)).join(' | ')||'None';}`}).join('\n')}
+${allNames.map(name=>{const t=tasks.filter(x=>x.createdBy===name||(x.owners||[]).includes(name));return`${name}: ${t.filter(x=>x.status==='In Progress').length} active, ${t.filter(x=>x.status==='Blocked').length} blocked — ${t.filter(x=>x.status!=='Done').slice(0,2).map(x=>x.desc.slice(0,35)).join(' | ')||'None'}`}).join('\n')}
 
 BLOCKED ITEMS (${blocked.length}):
 ${blocked.map(t=>`${t.createdBy||'?'}: ${t.desc.slice(0,50)} — Needs: ${t.help||'not specified'}`).join('\n')||'None'}
