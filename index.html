@@ -736,30 +736,38 @@ textarea{resize:vertical;min-height:70px;line-height:1.5;}
 
 <script>
 // ═══════════════════════════════════════════════════════
+// SAFE STORAGE READ
+// ═══════════════════════════════════════════════════════
+function safeRead(key, fallback){
+  try{ const v=localStorage.getItem(key); return v?JSON.parse(v):fallback; }
+  catch(e){ console.warn('Bad localStorage key:',key); return fallback; }
+}
+
+// ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let cswIndex = JSON.parse(localStorage.getItem('af3_csw')||'[]');
-let tasks = JSON.parse(localStorage.getItem('af3_tasks')||'[]');
-let activity = JSON.parse(localStorage.getItem('af3_activity')||'[]');
-let digest = JSON.parse(localStorage.getItem('af3_digest')||'{}');
-let gitCfg = JSON.parse(localStorage.getItem('af3_git')||'{}');
-let myProfile = JSON.parse(localStorage.getItem('af3_profile')||'{}');
-let teamRoster = JSON.parse(localStorage.getItem('af3_team')||JSON.stringify([
+let cswIndex = safeRead('af3_csw',[]);
+let tasks = safeRead('af3_tasks',[]);
+let activity = safeRead('af3_activity',[]);
+let digest = safeRead('af3_digest',{});
+let gitCfg = safeRead('af3_git',{});
+let myProfile = safeRead('af3_profile',{});
+let teamRoster = safeRead('af3_team',[
   {name:'Gio',position:'QA/Inspection Engineer',site:'MNT Phase 1-4'},
   {name:'Ana',position:'QA/QC Head',site:'MH SH, BCC'},
   {name:'Angely',position:'BOM/Costing Analyst',site:'Office'},
   {name:'Oliver',position:'Structural Engineer',site:'Future Projects'},
   {name:'Charles',position:'Technical Head',site:'All Sites'}
-]));
-let ownerKeywords = JSON.parse(localStorage.getItem('af3_keywords')||JSON.stringify({
+]);
+let ownerKeywords = safeRead('af3_keywords',{
   'Angely':['bom','cost','material','price','budget','quantity','estimate','costing','change order','payment','quote','quotation','bill','procurement'],
   'Ana':['qa','quality','land development','drainage','survey','lot','system','policy','procedure','lgu','permit','compliance','in/out','qc','land dev'],
   'Gio':['ft','finishing','inspection','pag-ibig','coc','punch list','plan detail','as-built','tile','paint','door','window','unit','endorsement'],
   'Oliver':['bt','box type','structural','footing','beam','column','slab','rebar','concrete','design','load','retaining wall','slope','reinforcement'],
   'Site-in-Charge':['manpower','equipment','weather','access','delay','excavation','backfill','site condition','contractor','delivery','field','progress'],
   'Charles':['process','efficiency','production','bottleneck','system','team','performance','management','overall','department','coordination']
-}));
-let recallTallyData = JSON.parse(localStorage.getItem('af3_recall')||'{}');
+});
+let recallTallyData = safeRead('af3_recall',{});
 let appTone = localStorage.getItem('af3_tone')||'';
 let lastSync = localStorage.getItem('af3_lastsync')||'Never';
 let selectedFiles = [];
@@ -781,11 +789,9 @@ const DAYS_AGO=d=>Math.round((Date.now()-new Date(d).getTime())/86400000);
 // Debounce utility — prevents heavy functions from running on every keystroke
 function debounce(fn, delay){
   let timer;
-  return function(...args){ clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args), delay); };
+  return function(...args){ clearTimeout(timer); timer=setTimeout(()=>fn.apply(this,args), delay); }
 }
-const debouncedCheckSimilar = debounce(checkSimilar, 400);
-const debouncedAnalyzeOwnership = debounce(analyzeOwnership, 400);
-const debouncedRenderSearch = debounce(renderSearch, 300);
+
 const GRAVITY_HIGH=['crack','collapse','failure','encroachment','legal','permit','lgu','structural','footing','slope','unsafe','injury','hazard','violation','retaining wall','emergency'];
 const GRAVITY_MEDIUM=['defect','quality','standard','specification','non-conforming','punch list','inspection','pag-ibig','coc','rework','compliance','incomplete'];
 const GRAVITY_LOW=['report','schedule','coordination','meeting','document','filing','update','memo','policy draft','admin'];
@@ -2462,8 +2468,27 @@ function triggerInstall(){if(deferredInstall){deferredInstall.prompt();deferredI
 // SW
 if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW:',e));});}
 
-// START
-checkOnboard();
+// Debounced input handlers — defined here so all functions exist first
+const debouncedCheckSimilar = debounce(checkSimilar, 400);
+const debouncedAnalyzeOwnership = debounce(analyzeOwnership, 400);
+const debouncedRenderSearch = debounce(renderSearch, 300);
+
+// SAFE START — catches any startup error so UI never stays dead
+try {
+  checkOnboard();
+} catch(e) {
+  console.error('Startup error:', e);
+  // Reset bad data and try again
+  try {
+    localStorage.removeItem('af3_csw');
+    localStorage.removeItem('af3_tasks');
+    localStorage.removeItem('af3_activity');
+    cswIndex=[]; tasks=[]; activity=[];
+    checkOnboard();
+  } catch(e2) {
+    console.error('Recovery failed:', e2);
+  }
+}
 </script>
 </body>
 </html>
