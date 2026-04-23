@@ -1,5 +1,7 @@
 # Disabled temporarily
-# name: ARGUS FIELD — Upload Notification
+# 
+
+name: ARGUS FIELD — Upload Notification
 
 on:
   push:
